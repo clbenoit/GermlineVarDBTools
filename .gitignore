@@ -47,3 +47,9 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+*.Rproj
+
+inst/extdata/annotations/gencode.v43lift37.annotation_canonical
+
+inst/extdata/testdata/*
