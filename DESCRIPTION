@@ -1,5 +1,5 @@
-Package: GermlineVarDB
-Title: GermlineVarDB
+Package: GermlineVarDBTools
+Title: GermlineVarDBTools
 Version: 0.0.0.9000
 Authors@R: 
     person(given = "Clement",
