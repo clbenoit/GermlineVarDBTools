@@ -17,7 +17,7 @@
 #' @noRd
 #' @export
 buildDB_sarek <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
-
+  
   ############### uncomment for dev tests #######################################
   #db_path <- system.file("extdata","testdata", package = "SomaVarDB")
   #prefix <- "test"
@@ -53,11 +53,11 @@ buildDB_sarek <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
   
   #### Is sample already in the db ####
   con <- dbConnect(SQLite(), db_name)
-  if(DBI::dbExistsTable(conn = con, name="samples")){
-    samples <- DBI::dbReadTable(conn = con,name="samples")
+  if(DBI::dbExistsTable(conn = con, name = "samples")){
+    samples <- DBI::dbReadTable(conn = con,name = "samples")
     if (!(vcf_header@samples %in% samples$sample)){
       samples_frame <- bind_rows(samples,samples_frame)
-      DBI::dbWriteTable(conn = con, name="samples", value= samples_frame, overwrite = TRUE)
+      DBI::dbWriteTable(conn = con, name = "samples", value= samples_frame, overwrite = TRUE)
       process_sample <- TRUE}
   } else {
     DBI::dbWriteTable(conn = con, name = 'samples',value = samples_frame)
@@ -112,7 +112,30 @@ buildDB_sarek <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
                  VKB = "Unknown", commentary = "") %>%
           dplyr::select(-ends_with("_af"), -any_of(c('clin_sig', 'pheno','somatic', 'pubmed', 'consequence_annotations_from_ensembl_vep__format__allele')))
         
-        csq.vcf$hgvsp <- gsub("^.*:","",csq.vcf$hgvsp)
+        csq.vcf$hgvsp_vep <- gsub("^.*:","",csq.vcf$hgvsp)
+        
+        amino_acid_mapping <- list(
+          Ala = "A", Arg = "R", Asn = "N", Asp = "D", Cys = "C",
+          Glu = "E", Gln = "Q", Gly = "G", His = "H", Ile = "I",
+          Leu = "L", Lys = "K", Met = "M", Phe = "F", Pro = "P",
+          Ser = "S", Thr = "T", Trp = "W", Tyr = "Y", Val = "V"
+        )
+        
+        # Function to convert three-letter amino acid code to single-letter code
+        convert_to_single_letter <- function(protein_change) {
+          for (three_letter in names(amino_acid_mapping)) {
+            single_letter <- amino_acid_mapping[[three_letter]]
+            protein_change <- gsub(three_letter, single_letter, protein_change)
+            print(single_letter)
+            print(protein_change)
+          }
+          return(protein_change)
+        }
+        
+        csq.vcf$hgvsp <- sapply(csq.vcf$hgvsp_vep, function(line) {
+          single_letter_change <- convert_to_single_letter(line)
+          return(single_letter_change)
+        })
         
         clinvar.vcf <- vcf_info %>%
           dplyr::select(any_of(c("clinvar_sig", "clinvar_disease_name"))) %>%
@@ -317,22 +340,22 @@ buildDB_sarek <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
       closeAllConnections()
       message("######\nDone inserting variants\n#####")
     } # end or promise concatenation
-
+    
     block_until_settled <- function(p) {
       promise_resolved <- FALSE
       p$finally(function(value) {
-      promise_resolved <<- TRUE
-    })
-    
-    while(!promise_resolved) {
-      later::run_now(1)
+        promise_resolved <<- TRUE
+      })
+      
+      while(!promise_resolved) {
+        later::run_now(1)
+      }
     }
-   }
-  
-   print(promise_all)
-  
-   block_until_settled(promise_all)
-
+    
+    print(promise_all)
+    
+    block_until_settled(promise_all)
+    
   } else {cat("sample already present in the database, skipping import")}
   gc(verbose = TRUE)
 }
