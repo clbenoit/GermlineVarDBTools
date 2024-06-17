@@ -7,7 +7,7 @@
 #' @noRd
 #' @export
 update_db_metadata <- function(db_path = NULL,
-                    prefix = NULL){
+                    prefix = NULL, genome_version = "hg19"){
 
   db_name <- file.path(db_path,paste0(prefix, ".db"))
 
@@ -24,8 +24,8 @@ update_db_metadata <- function(db_path = NULL,
                         qual_max = max(variant_geno$qa,na.rm = TRUE),
                         qual_min = min(variant_geno$qa,na.rm = TRUE),
                         nb_variants = as.character(length(variants_list)),
-                        nb_samples = as.character(length(unique(samples$sample)))
-                        )
+                        nb_samples = as.character(length(unique(samples$sample))),
+                        genome_version = genome_version)
   
   metadata$hash <- digest(metadata, algo = "md5")
 
