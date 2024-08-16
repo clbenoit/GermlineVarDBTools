@@ -19,7 +19,7 @@ CNVtodb_seqone <- function(prefix = NULL,
   print(db_name)
   ## add samples ##
   con <- dbConnect(SQLite(), db_name)
-  gtf <- loadDb(system.file("extdata","annotations/gencode.v43lift37.annotation_canonical", package = "GermlineVarDB"))
+  gtf <- loadDb(system.file("extdata","annotations/gencode.v43lift37.annotation_canonical", package = "GermlineVarDBTools"))
   exons <- GenomicFeatures::exonicParts(gtf)
 
   cnv_new_geno_raw <- read.table(cnvfile_path,header = TRUE, sep = "\t") %>% dplyr::select(c("sample_name","interval","padj",

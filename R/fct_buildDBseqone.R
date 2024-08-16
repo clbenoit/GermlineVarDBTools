@@ -5,6 +5,7 @@
 #' @importFrom VariantAnnotation readVcf scanVcfHeader geno header info
 #' @importFrom tibble tibble
 #' @importFrom magrittr %<>% 
+#' @importFrom RSQLite sqliteSetBusyHandler
 #' @importFrom dplyr %>% select filter mutate inner_join group_by case_when bind_cols mutate_all mutate_if arrange as_tibble
 #' @importFrom stringr str_replace_all str_detect str_c str_split
 #' @importFrom tidyr separate unnest gather spread replace_na pivot_wider
@@ -37,6 +38,9 @@ buildDB_seqone <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
   
   #### Is sample already in the db ####
   con <- dbConnect(SQLite(), db_name)
+  # Set the custom busy handler
+  sqliteSetBusyHandler(con, custom_busy_handler(150))
+  
   if(DBI::dbExistsTable(conn = con, name="samples")){
     samples <- DBI::dbReadTable(conn = con,name="samples")
     if (!(vcf_header@samples %in% samples$sample)){
@@ -47,7 +51,7 @@ buildDB_seqone <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
       DBI::dbWriteTable(conn = con, name = 'samples',value = samples_frame)
       process_sample <- TRUE
   }
-  DBI::dbDisconnect(con)
+  #DBI::dbDisconnect(con)
 
   if(process_sample){
     #### Check to see if CSQ exists ####
@@ -208,12 +212,12 @@ buildDB_seqone <- function(prefix = NULL, vcf_name = NULL, db_path = NULL) {
     vcf_metadata <- as.data.frame(IRanges::stack(header, index.var = "names"))
     vcf_metadata$sample <- vcf_header@samples
     vcf_metadata <- vcf_metadata %>% pivot_wider(names_from = "names", values_from = "Value")
-    con <- dbConnect(SQLite(), db_name)
+    #con <- dbConnect(SQLite(), db_name)
     DBI::dbWriteTable(conn = con, name = "vcf_metadata", value = vcf_metadata, append = TRUE)
-    DBI::dbDisconnect(con)
+    #DBI::dbDisconnect(con)
   
     message("######\nStarting inserting variants\n#####")
-    con <- dbConnect(SQLite(), db_name)
+    #con <- dbConnect(SQLite(), db_name)
     if(DBI::dbExistsTable(conn = con,name="variant_impact")){
       DBI::dbWriteTable(conn = con,name="variant_impact_tmp", value =  csq.vcf, overwrite = TRUE)
       dbSendQuery(con,"CREATE INDEX idx_variant_impact_tmp ON variant_impact_tmp (variant_id);")
