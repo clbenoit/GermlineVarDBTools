@@ -24,16 +24,19 @@ compute_sample_frequency <- function(db_path = NULL,
     columns <- DBI::dbGetQuery(conn = con, "PRAGMA table_info('frequencies');")$name    
     for (value in unique(samples[,attribute])){
       col <- columns[grepl(paste0(value,"_freq_total"),columns)]
-      print(paste0("ALTER TABLE frequencies DROP COLUMN ",col,";"))
-      tryCatch({
-        DBI::dbSendQuery(conn = con, paste0("ALTER TABLE frequencies DROP COLUMN '",col,"';"))
-      }, error = function(e){ print(e) })
+      # print(paste0("ALTER TABLE frequencies DROP COLUMN ",col,";"))
+      # tryCatch({
+      #   DBI::dbSendQuery(conn = con, paste0("ALTER TABLE frequencies DROP COLUMN '",col,"';"))
+      # }, error = function(e){ print(e) })
       
       samples_fil <- samples %>% filter(get(attribute) == value)
-      variant_geno_filtered <- variant_geno %>% inner_join(samples_fil,
-                                                  by = "sample", keep = FALSE)
+      rm(samples)
+      variant_geno_filtered <- variant_geno %>% 
+        select(c("variant_id","sample","gt")) %>%
+        inner_join(samples_fil,
+                   by = "sample", keep = FALSE)
+      rm(variant_geno)
       variant_geno_filtered$gt <- 1
-      
       n_samples <- length(unique(samples_fil$sample))
       frequencies_col <-aggregate(variant_geno_filtered$gt, by=list(variant_id=variant_geno_filtered$variant_id), FUN=sum)
       frequencies_col[,paste0(value,"_freq","_total_",n_samples)] <- (frequencies_col$x/n_samples) 
@@ -46,6 +49,7 @@ compute_sample_frequency <- function(db_path = NULL,
     DBI::dbWriteTable(conn = con, name="frequencies", value = frequencies, overwrite = TRUE) 
     } else {
     table <- DBI::dbReadTable(conn = con,  name="frequencies")
+    table <- subset(table, select = which(!(names(table) %in% col)))
     frequencies <- left_join(frequencies,table, by = "variant_id", keep = FALSE)
     DBI::dbWriteTable(conn = con, name="frequencies", value = frequencies, overwrite = TRUE) 
     }
